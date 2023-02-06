@@ -845,6 +845,19 @@ namespace Microsoft.PowerFx.Core.Types
             return attachmentType.IsTable ? attachmentRecord.ToTable()._type : attachmentRecord._type;
         }
 
+        /// <summary>
+        /// Lookup types can be either tables or records, and are represented using a LazyTable/Record type.
+        /// </summary>
+        public static DType CreateLookupType(DType lookupType)
+        {
+            Contracts.AssertValid(lookupType);
+            Contracts.Assert(lookupType.IsAggregate);
+
+            var lookupRecord = new BuiltInLazyTypes.LookupType(lookupType.ToRecord());
+
+            return lookupType.IsTable ? lookupRecord.ToTable()._type : lookupRecord._type;
+        }
+
         public static DType CreateFileType(DType fileType)
         {
             Contracts.AssertValid(fileType);
