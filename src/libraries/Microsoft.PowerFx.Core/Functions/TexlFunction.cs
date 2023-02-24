@@ -7,8 +7,6 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.PowerFx.Core.App.ErrorContainers;
 using Microsoft.PowerFx.Core.Binding;
 using Microsoft.PowerFx.Core.Entities;
@@ -27,7 +25,6 @@ using Microsoft.PowerFx.Core.Logging.Trackers;
 using Microsoft.PowerFx.Core.Types;
 using Microsoft.PowerFx.Core.Utils;
 using Microsoft.PowerFx.Syntax;
-using Microsoft.PowerFx.Types;
 using static Microsoft.PowerFx.Core.IR.IRTranslator;
 using CallNode = Microsoft.PowerFx.Syntax.CallNode;
 using IRCallNode = Microsoft.PowerFx.Core.IR.Nodes.CallNode;
@@ -362,7 +359,7 @@ namespace Microsoft.PowerFx.Core.Functions
         // This can be used to generate a list of enums required for a function library.
         public virtual IEnumerable<string> GetRequiredEnumNames()
         {
-            return new List<string>();
+            return Enumerable.Empty<string>();
         }
 
         // Return all signatures with at most 'arity' parameters.
@@ -472,12 +469,6 @@ namespace Microsoft.PowerFx.Core.Functions
             // Type check the args
             for (var i = 0; i < count; i++)
             {
-                // Identifiers don't have a type
-                if (IsIdentifierParam(i))
-                {
-                    continue;
-                }
-
                 var typeChecks = CheckType(args[i], argTypes[i], ParamTypes[i], errors, SupportCoercionForArg(i), out DType coercionType);
                 if (typeChecks && coercionType != null)
                 {
@@ -1416,6 +1407,33 @@ namespace Microsoft.PowerFx.Core.Functions
             }
 
             return new IRCallNode(context.GetIRContext(node), this, args);
+        }
+
+        /// <summary>
+        /// Function can override this method to provide pre-processing policy for argument.
+        /// By default, function does not attach any pre-processing for arguments.
+        /// </summary>
+        /// <param name="index">0 based index of argument.</param>
+        /// <returns></returns>
+        public virtual ArgPreprocessor GetArgPreprocessor(int index)
+        {
+            return ArgPreprocessor.None;
+        }
+
+        /// <summary>
+        /// Generic arg preprocessor that uses <see cref="ParamTypes"/> to determine pre-processing policy.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        internal ArgPreprocessor GetGenericArgPreprocessor(int index)
+        {
+            var paramType = ParamTypes[index] ?? DType.Unknown;
+            if (paramType == DType.Number)
+            {
+                return ArgPreprocessor.ReplaceBlankWithZero;
+            }
+
+            return ArgPreprocessor.None;
         }
     }
 }
