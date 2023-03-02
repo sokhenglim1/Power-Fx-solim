@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
 using System;
@@ -10,48 +10,49 @@ using Microsoft.PowerFx.Types;
 
 namespace Microsoft.PowerFx.Core.Types.BuiltInLazyTypes
 {
-    // Type represents attachment type which are delay loaded fields at runtime
+    // Type represents lookup type which are delay loaded fields at runtime
     internal class LookupType : RecordType
     {
-        public DType Lookup { get; }
+        public override IEnumerable<string> FieldNames { get; }
 
-        public LookupType(DType lookupType) 
+        public override string UserVisibleTypeName => "LookupType";
+
+        public delegate bool TryGetFieldDelegate(string name, out FormulaType type);
+
+        private readonly TryGetFieldDelegate _tryGetField;
+
+        internal string Identity;
+
+        public LookupType(string id, IEnumerable<string> fieldNames, TryGetFieldDelegate getter)
             : base()
         {
-            Contracts.Assert(lookupType.IsRecord);
-
-            Lookup = lookupType;
+            FieldNames = fieldNames;
+            _tryGetField = getter;
+            Identity = id;
         }
-        
-        public override IEnumerable<string> FieldNames => Lookup.GetRootFieldNames().Select(name => name.Value);
-
-        // public override string UserVisibleTypeName => "Attachment";
 
         public override bool TryGetFieldType(string name, out FormulaType type)
         {
-            if (!Lookup.TryGetType(new DName(name), out var dType))
-            {
-                type = Blank;
-                return false;
-            }
+            /* if (!_tryGetField(name, out var dType))
+             {
+                 type = Blank;
+                 return false;
+             }
 
-            type = Build(dType);
-            return true;
+             type = Build(dType);
+             return true;*/
+            return _tryGetField(name, out type);
         }
 
         public override bool Equals(object other)
         {
-            if (other is not LookupType otherLookupType)
-            {
-                return false;
-            }
-
-            return Lookup.Equals(otherLookupType.Lookup);
+            return other is LookupType otherTable &&
+                    Identity == otherTable.Identity;
         }
 
         public override int GetHashCode()
         {
-            return Lookup.GetHashCode();
+            return Identity.GetHashCode();
         }
     }
 }
